@@ -1,6 +1,6 @@
 # DatePass
 
-DatePass is a romantic, geeky invitation delivered as a signed Apple Wallet boarding pass. The backend is fully serverless: API Gateway, AWS Lambda, DynamoDB, private S3, Secrets Manager, CloudWatch and optional Route 53 custom-domain wiring.
+DatePass creates signed Apple Wallet passes for romantic moments. Version 1 shipped as a geeky invitation boarding pass; the current product direction is DatePass Memories: one commemorative Wallet pass per date, saved as a private memory.
 
 ## Architecture
 
@@ -35,6 +35,9 @@ The stable shareable URL is `/pass/{id}`. It redirects to a short-lived S3 presi
 | Method | Path | Purpose |
 |---|---|---|
 | `POST` | `/invite` | Create invitation, build signed pass and store it in S3 |
+| `GET` | `/admin/memories/new` | Private browser form for creating DatePass Memories |
+| `POST` | `/memories` | Create a commemorative memory pass from `multipart/form-data` |
+| `GET` | `/memories/{id}/preview` | Render the created memory and Wallet actions |
 | `GET` | `/pass/{id}` | Redirect to a short-lived `.pkpass` download URL |
 | `GET` | `/accept/{id}` | Render a confirmation screen |
 | `GET` | `/decline/{id}` | Render a rejection screen |
@@ -42,6 +45,65 @@ The stable shareable URL is `/pass/{id}`. It redirects to a short-lived S3 presi
 | `GET` | `/status/{id}` | Render status page in a browser or return JSON to API clients |
 | `GET` | `/api/status/{id}` | Always return invitation status as JSON |
 | `GET` | `/health` | Health check |
+
+## DatePass Memories
+
+Each memory uses a fresh UUID as `serialNumber`. Apple Wallet treats the pair `passTypeIdentifier + serialNumber` as the unique pass identity, so every date must have a different serial number to avoid replacing an older memory.
+
+Open the browser form:
+
+```text
+https://hlstozop1b.execute-api.us-east-1.amazonaws.com/prod/admin/memories/new
+```
+
+The form asks for the Creator API Key and keeps it only in the page session. It sends the key in `X-DatePass-Creator-Key`; do not store real keys in the repository.
+
+`POST /memories` expects multipart fields:
+
+```text
+recipient_name
+title
+date
+place
+message
+memory_number
+theme
+photo
+```
+
+Alternative curl command with a real local photo path:
+
+```bash
+export DATEPASS_URL="https://hlstozop1b.execute-api.us-east-1.amazonaws.com/prod"
+export CREATOR_API_KEY="$(
+  python -c 'import json; print(json.load(open("secret.json"))["creator_api_key"])'
+)"
+export DATE_PHOTO="/home/eduardo-franco/Escritorio/Solertia/demos/datepass/FirstDateCoco.jpeg"
+
+test -f "$DATE_PHOTO"
+test "${#CREATOR_API_KEY}" -ge 32
+
+curl -sS -X POST "$DATEPASS_URL/memories" \
+  -H "X-DatePass-Creator-Key: $CREATOR_API_KEY" \
+  -F "recipient_name=Coco" \
+  -F "title=Our First Date" \
+  -F "date=2026-06-23T13:00" \
+  -F "place=Nolitas, 1pm" \
+  -F "message=He preparado este recuerdo para recordar nuestra primera cita oficial" \
+  -F "memory_number=1" \
+  -F "theme=midnight-romance" \
+  -F "photo=@${DATE_PHOTO}"
+```
+
+Or use the guarded helper script:
+
+```bash
+export DATEPASS_URL="https://hlstozop1b.execute-api.us-east-1.amazonaws.com/prod"
+export DATE_PHOTO="/home/eduardo-franco/Escritorio/Solertia/demos/datepass/FirstDateCoco.jpeg"
+./scripts/create_memory.sh
+```
+
+Do not set `Content-Type` manually for multipart requests; the browser or curl will generate the correct boundary. The photo is validated as JPEG or PNG, capped at 10 MB, stored privately in S3 for preview, and included in the signed Wallet bundle as a strip image. Wallet controls the final layout, so DatePass can provide images, fields, colors and pass style, while iOS decides the exact composition.
 
 ## Apple Developer setup
 
@@ -82,7 +144,9 @@ source .venv/bin/activate
 pip install -r infra/requirements.txt
 aws configure
 cdk bootstrap
-cdk deploy
+export DATEPASS_API_BASE_URL="https://hlstozop1b.execute-api.us-east-1.amazonaws.com/prod"
+cdk diff --output cdk.out-chat
+cdk deploy --output cdk.out-chat
 ```
 
 Without a custom domain, CDK injects the generated API Gateway stage URL into the Lambda automatically. For a custom domain, export `DATEPASS_API_BASE_URL=https://date.example.com` before deployment so links embedded inside Wallet passes use that domain.
@@ -100,7 +164,9 @@ Run a smoke test:
 
 ```bash
 export DATEPASS_URL='https://abc123.execute-api.us-east-1.amazonaws.com/prod'
-export DATEPASS_CREATOR_KEY='copy-the-generated-creator-key'
+export CREATOR_API_KEY="$(
+  python -c 'import json; print(json.load(open("secret.json"))["creator_api_key"])'
+)"
 ./scripts/smoke_test.sh
 ```
 
@@ -118,6 +184,18 @@ logo.png
 logo@2x.png
 manifest.json
 signature
+```
+
+Memory passes include `strip.png` or `strip.jpg` when a photo is uploaded through `/memories`.
+
+## Tests
+
+Install development dependencies and run tests:
+
+```bash
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m pytest -q
 ```
 
 `manifest.json` hashes each pass source file. `signature` is a detached PKCS #7 signature containing the Apple WWDR intermediate certificate. The `.pkpass` file is a ZIP bundle with no parent directory.

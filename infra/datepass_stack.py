@@ -82,6 +82,13 @@ class DatePassStack(Stack):
             "Api",
             handler=fn,
             proxy=True,
+            binary_media_types=[
+                "*/*",
+                "multipart/form-data",
+                "image/jpeg",
+                "image/png",
+                "application/vnd.apple.pkpass",
+            ],
             deploy_options=apigateway.StageOptions(stage_name="prod", tracing_enabled=True, metrics_enabled=True),
         )
         fn.add_environment("API_BASE_URL", os.getenv("DATEPASS_API_BASE_URL", api.url))

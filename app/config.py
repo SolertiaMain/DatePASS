@@ -34,7 +34,6 @@ def get_settings() -> Settings:
     )
 
 
-@lru_cache(maxsize=1)
 def get_wallet_secret() -> dict[str, str]:
     settings = get_settings()
     client = boto3.client("secretsmanager", region_name=settings.aws_region)

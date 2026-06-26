@@ -4,19 +4,22 @@ import hmac
 import json
 import logging
 import uuid
+from datetime import datetime
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 import boto3
 
-from fastapi import Depends, FastAPI, Form, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from mangum import Mangum
 
 from .config import get_settings, get_wallet_secret
-from .models import InviteCreate, InviteResponse, InvitationStatus, utc_now_iso
+from .models import InviteCreate, InviteResponse, InvitationStatus, MemoryResponse, utc_now_iso
+from .photos import PHOTO_MAX_BYTES, build_wallet_photo_assets, validate_photo
 from .repository import InvitationRepository
-from .templates import page
+from .templates import admin_memory_form, memory_preview, page
 from .wallet_pass import WalletPassService
 
 logging.basicConfig(level=logging.INFO)
@@ -40,7 +43,7 @@ wallet = WalletPassService()
 def creator_auth(x_datepass_creator_key: Annotated[str | None, Header()] = None) -> None:
     expected = get_wallet_secret()["creator_api_key"]
     if not x_datepass_creator_key or not hmac.compare_digest(x_datepass_creator_key, expected):
-        raise HTTPException(status_code=401, detail="Invalid creator key")
+        raise HTTPException(status_code=401, detail="Invalid creator key. Verify that X-DatePass-Creator-Key contains the real key, not a documentation placeholder.")
 
 
 def require_invitation(invitation_id: str):
@@ -57,6 +60,28 @@ def urls(invitation_id: str) -> dict[str, str]:
         "decline_url": f"{settings.api_base_url}/decline/{invitation_id}",
         "status_url": f"{settings.api_base_url}/status/{invitation_id}",
     }
+
+
+def memory_urls(memory_id: str) -> dict[str, str]:
+    return {
+        "pass_url": f"{settings.api_base_url}/pass/{memory_id}",
+        "status_url": f"{settings.api_base_url}/status/{memory_id}",
+        "preview_url": f"{settings.api_base_url}/memories/{memory_id}/preview",
+    }
+
+
+def parse_memory_date(value: str) -> str:
+    raw_value = value.strip()
+    if not raw_value:
+        raise HTTPException(status_code=422, detail="Date is required")
+    normalized = raw_value.replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid date") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        parsed = parsed.replace(tzinfo=ZoneInfo("America/Monterrey"))
+    return parsed.isoformat()
 
 
 def publish_response_event(invitation: dict) -> None:
@@ -108,10 +133,80 @@ def create_invite(payload: InviteCreate):
     return {"id": invitation_id, "status": invitation["status"], **urls(invitation_id)}
 
 
+@app.get("/admin/memories/new", response_class=HTMLResponse)
+def new_memory_form():
+    return admin_memory_form()
+
+
+@app.post("/memories", response_model=MemoryResponse, dependencies=[Depends(creator_auth)])
+async def create_memory(
+    recipient_name: Annotated[str, Form(..., min_length=1, max_length=80)],
+    title: Annotated[str, Form(..., min_length=1, max_length=80)],
+    date: Annotated[str, Form(...)],
+    place: Annotated[str, Form(..., min_length=1, max_length=140)],
+    message: Annotated[str, Form(..., min_length=1, max_length=600)],
+    memory_number: Annotated[int, Form(..., ge=1, le=999)],
+    theme: Annotated[str, Form()] = "midnight-romance",
+    photo: Annotated[UploadFile | None, File()] = None,
+):
+    if photo is None:
+        raise HTTPException(status_code=422, detail="Photo file is required")
+    photo_data = await photo.read(PHOTO_MAX_BYTES + 1)
+    try:
+        validated_photo = validate_photo(photo_data, photo.filename)
+        wallet_photo_assets = build_wallet_photo_assets(validated_photo.data)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    memory_id = str(uuid.uuid4())
+    now = utc_now_iso()
+    memory = {
+        "id": memory_id,
+        "kind": "memory",
+        "partner_name": recipient_name.strip(),
+        "memory_date": parse_memory_date(date),
+        "place": place.strip(),
+        "story": message.strip(),
+        "title": title.strip(),
+        "memory_number": memory_number,
+        "theme": theme.strip() or "midnight-romance",
+        "status": "saved",
+        "pass_s3_key": "",
+        "photo_s3_key": "",
+        "photo_content_type": validated_photo.content_type,
+        "photo_filename": validated_photo.filename,
+        "created_at": now,
+        "updated_at": now,
+    }
+    memory_for_pass = {**memory, "photo_assets": wallet_photo_assets}
+    try:
+        photo_key = wallet.store_memory_photo(memory_id, validated_photo.data, validated_photo.extension, validated_photo.content_type)
+        pass_key = wallet.generate_and_store(memory_for_pass)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    memory["photo_s3_key"] = photo_key
+    memory["pass_s3_key"] = pass_key
+    repo.create(memory)
+    logger.info("Memory created", extra={"memory_id": memory_id})
+    return {"id": memory_id, "serial_number": memory_id, **memory_urls(memory_id)}
+
+
 @app.get("/pass/{invitation_id}")
 def get_pass(invitation_id: str):
     invitation = require_invitation(invitation_id)
     return RedirectResponse(wallet.create_download_url(invitation["pass_s3_key"]), status_code=302)
+
+
+@app.get("/memories/{memory_id}/preview", response_class=HTMLResponse)
+def preview_memory(memory_id: str):
+    memory = require_invitation(memory_id)
+    if memory.get("kind") != "memory":
+        raise HTTPException(status_code=404, detail="Memory not found")
+    if not memory.get("photo_s3_key"):
+        raise HTTPException(status_code=404, detail="Memory photo not found")
+    pass_url = memory_urls(memory_id)["pass_url"]
+    photo_url = wallet.create_photo_url(memory["photo_s3_key"])
+    return memory_preview(memory, photo_url, pass_url)
 
 
 @app.get("/accept/{invitation_id}", response_class=HTMLResponse)
@@ -149,6 +244,21 @@ def respond(invitation_id: str, action: Annotated[str, Form()]):
 
 def status_payload(invitation: dict) -> dict:
     invitation_id = invitation["id"]
+    if invitation.get("kind") == "memory":
+        return {
+            "id": invitation_id,
+            "kind": "memory",
+            "partner_name": invitation["partner_name"],
+            "date": invitation["memory_date"],
+            "place": invitation["place"],
+            "title": invitation["title"],
+            "memory_number": invitation["memory_number"],
+            "theme": invitation.get("theme", "midnight-romance"),
+            "serial_number": invitation_id,
+            "pass_url": memory_urls(invitation_id)["pass_url"],
+            "preview_url": memory_urls(invitation_id)["preview_url"],
+            "updated_at": invitation["updated_at"],
+        }
     return {
         "id": invitation_id,
         "recipient_name": invitation["recipient_name"],
@@ -165,6 +275,8 @@ def get_status(invitation_id: str, request: Request):
     invitation = require_invitation(invitation_id)
     payload = status_payload(invitation)
     if "text/html" in request.headers.get("accept", ""):
+        if invitation.get("kind") == "memory":
+            return HTMLResponse(page("Memory status", invitation["title"], f"Franco + {invitation['partner_name']} · Place: {invitation['place']}", link_url=payload["pass_url"], link_label="Download Wallet memory"))
         state = {"pending": "Waiting for confirmation ✨", "accepted": "Confirmed ❤️", "declined": "Declined 💔"}[invitation["status"]]
         return HTMLResponse(page("Invitation status", state, f"Passenger: {invitation['recipient_name']} · Destination: Date Zone · Place: {invitation['place']}", link_url=payload["pass_url"], link_label="Download Wallet pass"))
     return payload
