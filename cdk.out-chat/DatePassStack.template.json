@@ -1,0 +1,800 @@
+{
+ "Resources": {
+  "Invitations14F94624": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "id",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "id",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "SSESpecification": {
+     "SSEEnabled": true
+    },
+    "TableName": "DatePassInvitations"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Invitations/Resource"
+   }
+  },
+  "PassBucket32C99019": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/PassBucket/Resource"
+   }
+  },
+  "PassBucketPolicyA0183722": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "PassBucket32C99019"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PassBucket32C99019",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PassBucket32C99019",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/PassBucket/Policy/Resource"
+   }
+  },
+  "WalletSecret682BC3F6": {
+   "Type": "AWS::SecretsManager::Secret",
+   "Properties": {
+    "Description": "Apple Wallet certificates, identifiers and DatePass creator API key",
+    "GenerateSecretString": {},
+    "Name": "datepass/apple-wallet"
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/WalletSecret/Resource"
+   }
+  },
+  "InvitationEvents44DA160E": {
+   "Type": "AWS::Events::EventBus",
+   "Properties": {
+    "Name": "DatePassEvents"
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/InvitationEvents/Resource"
+   }
+  },
+  "DatePassApiServiceRole10284420": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/DatePassApi/ServiceRole/Resource"
+   }
+  },
+  "DatePassApiServiceRoleDefaultPolicy0DE29162": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "Invitations14F94624",
+          "Arn"
+         ]
+        },
+        {
+         "Ref": "AWS::NoValue"
+        }
+       ]
+      },
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*",
+        "s3:DeleteObject*",
+        "s3:PutObject",
+        "s3:PutObjectLegalHold",
+        "s3:PutObjectRetention",
+        "s3:PutObjectTagging",
+        "s3:PutObjectVersionTagging",
+        "s3:Abort*"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "PassBucket32C99019",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "PassBucket32C99019",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Ref": "WalletSecret682BC3F6"
+       }
+      },
+      {
+       "Action": "events:PutEvents",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "InvitationEvents44DA160E",
+         "Arn"
+        ]
+       }
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "PassBucket32C99019",
+            "Arn"
+           ]
+          },
+          "/passes/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "DatePassApiServiceRoleDefaultPolicy0DE29162",
+    "Roles": [
+     {
+      "Ref": "DatePassApiServiceRole10284420"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/DatePassApi/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "DatePassApiE3F02162": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "x86_64"
+    ],
+    "Code": {
+     "ImageUri": {
+      "Fn::Sub": "345667997438.dkr.ecr.us-east-1.${AWS::URLSuffix}/cdk-hnb659fds-container-assets-345667997438-us-east-1:bb89ab178948453bc80756813b6160072ab8e19d9afa5ad5abc5537c46a21119"
+     }
+    },
+    "Environment": {
+     "Variables": {
+      "TABLE_NAME": {
+       "Ref": "Invitations14F94624"
+      },
+      "BUCKET_NAME": {
+       "Ref": "PassBucket32C99019"
+      },
+      "WALLET_SECRET_ARN": {
+       "Ref": "WalletSecret682BC3F6"
+      },
+      "PRESIGNED_URL_TTL_SECONDS": "900",
+      "EVENT_BUS_NAME": {
+       "Ref": "InvitationEvents44DA160E"
+      },
+      "CORS_ALLOW_ORIGINS": "",
+      "API_BASE_URL": "https://hlstozop1b.execute-api.us-east-1.amazonaws.com/prod"
+     }
+    },
+    "MemorySize": 1024,
+    "PackageType": "Image",
+    "Role": {
+     "Fn::GetAtt": [
+      "DatePassApiServiceRole10284420",
+      "Arn"
+     ]
+    },
+    "Timeout": 30
+   },
+   "DependsOn": [
+    "DatePassApiServiceRoleDefaultPolicy0DE29162",
+    "DatePassApiServiceRole10284420"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/DatePassApi/Resource",
+    "aws:asset:path": "asset.bb89ab178948453bc80756813b6160072ab8e19d9afa5ad5abc5537c46a21119",
+    "aws:asset:dockerfile-path": "Dockerfile",
+    "aws:asset:property": "Code.ImageUri"
+   }
+  },
+  "ApiF70053CD": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "BinaryMediaTypes": [
+     "*/*",
+     "multipart/form-data",
+     "image/jpeg",
+     "image/png",
+     "application/vnd.apple.pkpass"
+    ],
+    "Name": "Api"
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Resource"
+   }
+  },
+  "ApiCloudWatchRole73EC6FC4": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/CloudWatchRole/Resource"
+   }
+  },
+  "ApiAccountA18C9B29": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "ApiCloudWatchRole73EC6FC4",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "ApiF70053CD"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Account"
+   }
+  },
+  "ApiDeploymentB17BE62D6af5a21b2d6ec185b2607da3aacc0090": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Automatically created by the RestApi construct",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "DependsOn": [
+    "ApiproxyANY4946669B",
+    "Apiproxy05443892",
+    "ApiANY40671C4F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Deployment/Resource"
+   }
+  },
+  "ApiDeploymentStageprod3EB9684E": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "DeploymentId": {
+     "Ref": "ApiDeploymentB17BE62D6af5a21b2d6ec185b2607da3aacc0090"
+    },
+    "MethodSettings": [
+     {
+      "DataTraceEnabled": false,
+      "HttpMethod": "*",
+      "MetricsEnabled": true,
+      "ResourcePath": "/*"
+     }
+    ],
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    },
+    "StageName": "prod",
+    "TracingEnabled": true
+   },
+   "DependsOn": [
+    "ApiAccountA18C9B29"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/DeploymentStage.prod/Resource"
+   }
+  },
+  "Apiproxy05443892": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "{proxy+}",
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Default/{proxy+}/Resource"
+   }
+  },
+  "ApiproxyANYApiPermissionDatePassStackApiA140B8DDANYproxyA382A366": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "DatePassApiE3F02162",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:345667997438:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStageprod3EB9684E"
+       },
+       "/*/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Default/{proxy+}/ANY/ApiPermission.DatePassStackApiA140B8DD.ANY..{proxy+}"
+   }
+  },
+  "ApiproxyANYApiPermissionTestDatePassStackApiA140B8DDANYproxy2F64137C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "DatePassApiE3F02162",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:345667997438:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/*/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Default/{proxy+}/ANY/ApiPermission.Test.DatePassStackApiA140B8DD.ANY..{proxy+}"
+   }
+  },
+  "ApiproxyANY4946669B": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "ANY",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "DatePassApiE3F02162",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "Apiproxy05443892"
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Default/{proxy+}/ANY/Resource"
+   }
+  },
+  "ApiANYApiPermissionDatePassStackApiA140B8DDANYA68882FD": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "DatePassApiE3F02162",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:345667997438:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/",
+       {
+        "Ref": "ApiDeploymentStageprod3EB9684E"
+       },
+       "/*/"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Default/ANY/ApiPermission.DatePassStackApiA140B8DD.ANY.."
+   }
+  },
+  "ApiANYApiPermissionTestDatePassStackApiA140B8DDANY47D5CA0C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "DatePassApiE3F02162",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:345667997438:",
+       {
+        "Ref": "ApiF70053CD"
+       },
+       "/test-invoke-stage/*/"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Default/ANY/ApiPermission.Test.DatePassStackApiA140B8DD.ANY.."
+   }
+  },
+  "ApiANY40671C4F": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "ANY",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "DatePassApiE3F02162",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "ApiF70053CD",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "ApiF70053CD"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/Api/Default/ANY/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/02PQW/CMAyFfwv3kA04cYSxSZM2rSq7I5N6JWuTVLEzVkX971MSGJze52fHflnKxXotH2dwprlqunmvjzLuGVQn4EyH2IwWjGuOMn7CsUfx9GUzTIJWMm6D6pCTeaEileu1Gm92qSdBqDwyGbDQopdxn+s0V2gS+IOWScbnpNtAqXflSfRgjg3IuHOqQ/9qoMWXYBVrZ9PgPVfojSbSzk5Cg5GxdiV91lvAazRU/gBEyCTvtm+Sk3qyxsGRZufHLRAKGHQLjGcYZXzLqWok3gw6n7jhRikXLIsdDr0bDdr827tqz9DmXAVqJBe8wnyk8u53vDqXxYXfkU+uSVahafp/KXLmtE3bNk18BB4CT6Ia+eTsw0oulnI1+yat5z5Y1gZlXfQP09TQAAwCAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "DatePassStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "ApiEndpoint4F160690": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "ApiF70053CD"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "ApiDeploymentStageprod3EB9684E"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "PublicUrl": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "ApiF70053CD"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "ApiDeploymentStageprod3EB9684E"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "WalletSecretArn": {
+   "Value": {
+    "Ref": "WalletSecret682BC3F6"
+   }
+  },
+  "PassBucketName": {
+   "Value": {
+    "Ref": "PassBucket32C99019"
+   }
+  },
+  "TableName": {
+   "Value": {
+    "Ref": "Invitations14F94624"
+   }
+  },
+  "EventBusName": {
+   "Value": {
+    "Ref": "InvitationEvents44DA160E"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

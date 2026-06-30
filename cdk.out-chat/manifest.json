@@ -1,0 +1,230 @@
+{
+  "version": "41.0.0",
+  "artifacts": {
+    "DatePassStack.assets": {
+      "type": "cdk:asset-manifest",
+      "properties": {
+        "file": "DatePassStack.assets.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+      }
+    },
+    "DatePassStack": {
+      "type": "aws:cloudformation:stack",
+      "environment": "aws://345667997438/us-east-1",
+      "properties": {
+        "templateFile": "DatePassStack.template.json",
+        "terminationProtection": false,
+        "validateOnSynth": false,
+        "assumeRoleArn": "arn:${AWS::Partition}:iam::345667997438:role/cdk-hnb659fds-deploy-role-345667997438-us-east-1",
+        "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::345667997438:role/cdk-hnb659fds-cfn-exec-role-345667997438-us-east-1",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-345667997438-us-east-1/3c54f0f6ea96b22ceddd9cdbf72ff36fe09cd6cf2d092d6c9a14211a5c60e087.json",
+        "requiresBootstrapStackVersion": 6,
+        "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
+        "additionalDependencies": [
+          "DatePassStack.assets"
+        ],
+        "lookupRole": {
+          "arn": "arn:${AWS::Partition}:iam::345667997438:role/cdk-hnb659fds-lookup-role-345667997438-us-east-1",
+          "requiresBootstrapStackVersion": 8,
+          "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version"
+        }
+      },
+      "dependencies": [
+        "DatePassStack.assets"
+      ],
+      "metadata": {
+        "/DatePassStack/Invitations": [
+          {
+            "type": "aws:cdk:hasPhysicalName",
+            "data": {
+              "Ref": "Invitations14F94624"
+            }
+          }
+        ],
+        "/DatePassStack/Invitations/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "Invitations14F94624"
+          }
+        ],
+        "/DatePassStack/PassBucket/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PassBucket32C99019"
+          }
+        ],
+        "/DatePassStack/PassBucket/Policy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PassBucketPolicyA0183722"
+          }
+        ],
+        "/DatePassStack/WalletSecret/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WalletSecret682BC3F6"
+          }
+        ],
+        "/DatePassStack/InvitationEvents/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "InvitationEvents44DA160E"
+          }
+        ],
+        "/DatePassStack/DatePassApi/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatePassApiServiceRole10284420"
+          }
+        ],
+        "/DatePassStack/DatePassApi/ServiceRole/DefaultPolicy/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatePassApiServiceRoleDefaultPolicy0DE29162"
+          }
+        ],
+        "/DatePassStack/DatePassApi/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "DatePassApiE3F02162"
+          }
+        ],
+        "/DatePassStack/Api/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiF70053CD"
+          }
+        ],
+        "/DatePassStack/Api/CloudWatchRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiCloudWatchRole73EC6FC4"
+          }
+        ],
+        "/DatePassStack/Api/Account": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiAccountA18C9B29"
+          }
+        ],
+        "/DatePassStack/Api/Deployment/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiDeploymentB17BE62D6af5a21b2d6ec185b2607da3aacc0090"
+          }
+        ],
+        "/DatePassStack/Api/DeploymentStage.prod/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiDeploymentStageprod3EB9684E"
+          }
+        ],
+        "/DatePassStack/Api/Endpoint": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiEndpoint4F160690"
+          }
+        ],
+        "/DatePassStack/Api/Default/{proxy+}/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "Apiproxy05443892"
+          }
+        ],
+        "/DatePassStack/Api/Default/{proxy+}/ANY/ApiPermission.DatePassStackApiA140B8DD.ANY..{proxy+}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiproxyANYApiPermissionDatePassStackApiA140B8DDANYproxyA382A366"
+          }
+        ],
+        "/DatePassStack/Api/Default/{proxy+}/ANY/ApiPermission.Test.DatePassStackApiA140B8DD.ANY..{proxy+}": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiproxyANYApiPermissionTestDatePassStackApiA140B8DDANYproxy2F64137C"
+          }
+        ],
+        "/DatePassStack/Api/Default/{proxy+}/ANY/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiproxyANY4946669B"
+          }
+        ],
+        "/DatePassStack/Api/Default/ANY/ApiPermission.DatePassStackApiA140B8DD.ANY..": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiANYApiPermissionDatePassStackApiA140B8DDANYA68882FD"
+          }
+        ],
+        "/DatePassStack/Api/Default/ANY/ApiPermission.Test.DatePassStackApiA140B8DD.ANY..": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiANYApiPermissionTestDatePassStackApiA140B8DDANY47D5CA0C"
+          }
+        ],
+        "/DatePassStack/Api/Default/ANY/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "ApiANY40671C4F"
+          }
+        ],
+        "/DatePassStack/PublicUrl": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PublicUrl"
+          }
+        ],
+        "/DatePassStack/WalletSecretArn": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "WalletSecretArn"
+          }
+        ],
+        "/DatePassStack/PassBucketName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "PassBucketName"
+          }
+        ],
+        "/DatePassStack/TableName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "TableName"
+          }
+        ],
+        "/DatePassStack/EventBusName": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "EventBusName"
+          }
+        ],
+        "/DatePassStack/CDKMetadata/Default": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CDKMetadata"
+          }
+        ],
+        "/DatePassStack/BootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "BootstrapVersion"
+          }
+        ],
+        "/DatePassStack/CheckBootstrapVersion": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "CheckBootstrapVersion"
+          }
+        ]
+      },
+      "displayName": "DatePassStack"
+    },
+    "Tree": {
+      "type": "cdk:tree",
+      "properties": {
+        "file": "tree.json"
+      }
+    }
+  },
+  "minimumCliVersion": "2.1005.0"
+}

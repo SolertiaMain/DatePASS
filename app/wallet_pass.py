@@ -107,7 +107,6 @@ class WalletPassService:
             "backgroundColor": "rgb(48, 31, 76)",
             "foregroundColor": "rgb(255, 255, 255)",
             "labelColor": "rgb(230, 202, 255)",
-            "relevantDate": memory_date,
             "eventTicket": {
                 "headerFields": [
                     {"key": "memory_no", "label": "MEMORY", "value": f"#{memory_number:03d}"}

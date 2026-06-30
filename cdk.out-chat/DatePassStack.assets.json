@@ -1,0 +1,37 @@
+{
+  "version": "41.0.0",
+  "files": {
+    "3c54f0f6ea96b22ceddd9cdbf72ff36fe09cd6cf2d092d6c9a14211a5c60e087": {
+      "displayName": "DatePassStack Template",
+      "source": {
+        "path": "DatePassStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "345667997438-us-east-1": {
+          "bucketName": "cdk-hnb659fds-assets-345667997438-us-east-1",
+          "objectKey": "3c54f0f6ea96b22ceddd9cdbf72ff36fe09cd6cf2d092d6c9a14211a5c60e087.json",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::345667997438:role/cdk-hnb659fds-file-publishing-role-345667997438-us-east-1"
+        }
+      }
+    }
+  },
+  "dockerImages": {
+    "bb89ab178948453bc80756813b6160072ab8e19d9afa5ad5abc5537c46a21119": {
+      "displayName": "DatePassApi/AssetImage",
+      "source": {
+        "directory": "asset.bb89ab178948453bc80756813b6160072ab8e19d9afa5ad5abc5537c46a21119",
+        "platform": "linux/amd64"
+      },
+      "destinations": {
+        "345667997438-us-east-1": {
+          "repositoryName": "cdk-hnb659fds-container-assets-345667997438-us-east-1",
+          "imageTag": "bb89ab178948453bc80756813b6160072ab8e19d9afa5ad5abc5537c46a21119",
+          "region": "us-east-1",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::345667997438:role/cdk-hnb659fds-image-publishing-role-345667997438-us-east-1"
+        }
+      }
+    }
+  }
+}

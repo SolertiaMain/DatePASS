@@ -41,6 +41,7 @@ def test_memory_pass_uses_event_ticket(monkeypatch):
     assert "eventTicket" in pass_json
     assert "boardingPass" not in pass_json
     assert "barcodes" not in pass_json
+    assert "relevantDate" not in pass_json
     assert pass_json["backgroundColor"] == "rgb(48, 31, 76)"
     assert pass_json["eventTicket"]["headerFields"][0]["value"] == "#001"
     assert pass_json["eventTicket"]["secondaryFields"][0]["value"] == "Franco + Coco"
